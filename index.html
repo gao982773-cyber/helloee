@@ -1,0 +1,1581 @@
+<html lang="zh-Hant"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生熟易 - 水果生熟度检测</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/all.min.css" rel="stylesheet">
+    <script>
+        // Tailwind 配置
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4CAF50',
+                        secondary: '#FF9800',
+                        tertiary: '#E91E63',
+                        neutral: '#f5f5f5',
+                        dark: '#333333'
+                    },
+                    fontFamily: {
+                        sans: ['Noto Sans HK', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .text-shadow {
+                text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .card-hover {
+                transition: all 0.3s ease;
+            }
+            .card-hover:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            }
+            .animate-float {
+                animation: float 3s ease-in-out infinite;
+            }
+            @keyframes float {
+                0% { transform: translateY(0px); }
+                50% { transform: translateY(-10px); }
+                100% { transform: translateY(0px); }
+            }
+            .gradient-bg {
+                background: linear-gradient(135deg, #8BC34A 0%, #4CAF50 100%);
+            }
+            .origin-badge {
+                position: absolute;
+                top: 2px;
+                right: 2px;
+                background: rgba(0,0,0,0.5);
+                color: white;
+                font-size: 8px;
+                padding: 1px 4px;
+                border-radius: 3px;
+            }
+            .option-selected {
+                border-color: #E91E63;
+                background-color: rgba(233, 30, 99, 0.1);
+            }
+        }
+    </style>
+    <!-- 引入字体 -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+HK:wght@300;400;500;700&amp;display=swap" rel="stylesheet">
+</head>
+<body class="font-sans bg-gray-50 text-dark overflow-x-hidden">
+    <!-- 应用容器 -->
+    <div class="max-w-md mx-auto bg-white min-h-screen shadow-lg relative overflow-hidden">
+        <!-- 首页/封面 -->
+        <div id="home-screen" class="h-full min-h-screen flex flex-col items-center justify-between p-6 gradient-bg text-white transition-all duration-500">
+            <div class="text-center mt-20">
+                <h1 class="text-[clamp(2rem,5vw,3rem)] font-bold mb-4 text-shadow">生熟易</h1>
+                <p class="text-[clamp(1rem,2vw,1.25rem)] opacity-90 mb-8">一拍即知，水果生熟轻松判断</p>
+                <div class="relative w-64 h-64 mx-auto">
+                    <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/code_assistant/f60a84a88a83479a86982c13b68c1dc3~tplv-a9rns2rl98-image.image?rcl=20250811175727065B3407C92FDAAA981F&amp;rk3s=8e244e95&amp;rrcfp=e75484ac&amp;x-expires=1755511048&amp;x-signature=bFE2NEfbDpO%2FfuQH5u0AAAxmsFk%3D" alt="各种水果插画" class="w-full h-full object-contain animate-float rounded-full">
+                </div>
+            </div>
+            
+            <div class="w-full mb-16">
+                <button id="start-btn" class="w-full py-4 px-6 bg-white text-primary rounded-full font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 flex items-center justify-center">
+                    开始使用
+                    <i class="fa fa-arrow-right ml-2"></i>
+                </button>
+                
+                <div class="flex justify-center mt-6">
+                    <button id="mode-toggle" class="bg-white/20 backdrop-blur-sm py-2 px-4 rounded-full text-sm flex items-center">
+                        <i class="fa fa-shopping-bag mr-2"></i>
+                        <span>切换到商户模式</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 水果选择界面 -->
+        <div id="fruit-selection" class="h-full min-h-screen hidden">
+            <!-- 顶部导航 -->
+            <header class="bg-primary text-white p-4 shadow-md">
+                <div class="flex justify-between items-center">
+                    <button id="back-to-home" class="p-2 rounded-full hover:bg-white/20 transition-colors">
+                        <i class="fa fa-arrow-left"></i>
+                    </button>
+                    <h2 class="text-xl font-semibold">选择水果</h2>
+                    <button id="knowledge-btn" class="p-2 rounded-full hover:bg-white/20 transition-colors">
+                        <i class="fa fa-book"></i>
+                    </button>
+                </div>
+                
+                <!-- 搜索框 -->
+                <div class="mt-4 relative">
+                    <input type="text" id="fruit-search" placeholder="搜索全球水果..." class="w-full py-3 px-4 pl-10 rounded-lg bg-white/20 backdrop-blur-sm text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50">
+                    <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-white/70"></i>
+                    <div id="search-suggestions" class="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto hidden">
+                        <!-- 搜索建议将通过JS动态生成 -->
+                    </div>
+                </div>
+                <!-- 搜索结果提示 -->
+                <div id="search-results" class="mt-2 text-sm text-white/80 hidden">
+                    <span id="match-count">0</span> 个匹配结果
+                </div>
+            </header>
+            
+            <!-- 主要内容区 -->
+            <main class="p-4 overflow-y-auto h-[calc(100vh-13rem)]">
+                <!-- 无搜索结果提示 -->
+                <div id="no-results" class="text-center py-10 hidden">
+                    <i class="fa fa-search text-gray-300 text-4xl mb-3"></i>
+                    <p class="text-gray-500">没有找到匹配的水果</p>
+                    <button id="show-all-fruits" class="mt-3 text-primary hover:underline">查看所有水果</button>
+                </div>
+                
+                <!-- 地区筛选器 -->
+                <div class="mb-6 overflow-x-auto pb-2">
+                    <div class="flex space-x-2 min-w-max">
+                        <button class="region-filter active px-4 py-2 bg-primary text-white rounded-full text-sm whitespace-nowrap">
+                            全部地区
+                        </button>
+                        <button class="region-filter px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm whitespace-nowrap">
+                            亚洲
+                        </button>
+                        <button class="region-filter px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm whitespace-nowrap">
+                            欧洲
+                        </button>
+                        <button class="region-filter px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm whitespace-nowrap">
+                            美洲
+                        </button>
+                        <button class="region-filter px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm whitespace-nowrap">
+                            非洲
+                        </button>
+                        <button class="region-filter px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm whitespace-nowrap">
+                            大洋洲
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 第一类：拍打检测 -->
+                <section class="mb-8">
+                    <div class="flex items-center mb-4">
+                        <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mr-3">
+                            <i class="fa fa-volume-up text-primary"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold">拍打检测</h3>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        <!-- 水果卡片 -->
+                        <div class="fruit-card card-hover bg-white rounded-xl shadow p-3 border border-gray-100" data-fruit="watermelon" data-type="1" data-name="西瓜" data-region="亚洲">
+                            <div class="relative h-24 mb-2">
+                                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/code_assistant/01fec3c71bb6440ab0fc9664c563d86f~tplv-a9rns2rl98-image.image?rcl=20250811184124D783E7B0B41405B830D9&amp;rk3s=8e244e95&amp;rrcfp=2609e108&amp;x-expires=1755513688&amp;x-signature=vW882vqeaJqdK0hs%2FJ0nBtcp5TA%3D" alt="西瓜" class="w-full h-full object-cover rounded-lg">
+                                <span class="origin-badge">亚洲</span>
+                            </div>
+                            <h4 class="font-medium text-center">西瓜</h4>
+                        </div>
+                        
+                        <div class="fruit-card card-hover bg-white rounded-xl shadow p-3 border border-gray-100" data-fruit="coconut" data-type="1" data-name="椰子" data-region="亚洲">
+                            <div class="relative h-24 mb-2">
+                                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/code_assistant/92a1afc31c844bb3aac6b786ba670788~tplv-a9rns2rl98-image.image?rcl=20250811191124449AE43D86669C3B51BE&amp;rk3s=8e244e95&amp;rrcfp=2609e108&amp;x-expires=1755515488&amp;x-signature=VvDl%2FABSb8M7J3psYhLeONq4buE%3D" alt="椰子" class="w-full h-full object-cover rounded-lg">
+                                <span class="origin-badge">亚洲</span>
+                            </div>
+                            <h4 class="font-medium text-center">椰子</h4>
+                        </div>
+                        
+                        <div class="fruit-card card-hover bg-white rounded-xl shadow p-3 border border-gray-100" data-fruit="honeydew" data-type="1" data-name="哈密瓜" data-region="亚洲">
+                            <div class="relative h-24 mb-2">
+                                <img src="https://p3-search.byteimg.com/obj/labis/a919ad69e0fba3e8d0017302e17bb262" alt="哈密瓜" class="w-full h-full object-cover rounded-lg">
+                                <span class="origin-badge">亚洲</span>
+                            </div>
+                            <h4 class="font-medium text-center">哈密瓜</h4>
+                        </div>
+                        
+                        <div class="fruit-card card-hover bg-white rounded-xl shadow p-3 border border-gray-100" data-fruit="cantelope" data-type="1" data-name="柚子" data-region="亚洲">
+                            <div class="relative h-24 mb-2">
+                                <img src="https://p3-search.byteimg.com/obj/labis/e6219d96a765741e302178e325a362e5" alt="柚子" class="w-full h-full object-cover rounded-lg">
+                                <span class="origin-badge">亚洲</span>
+                            </div>
+                            <h4 class="font-medium text-center">柚子</h4>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 第二类：外观检测 -->
+                <section class="mb-8">
+                    <div class="flex items-center mb-4">
+                        <div class="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center mr-3">
+                            <i class="fa fa-camera text-secondary"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold">外观检测</h3>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="fruit-card card-hover bg-white rounded-xl shadow p-3 border border-gray-100" data-fruit="mango" data-type="2" data-name="芒果" data-region="亚洲">
+                            <div class="relative h-24 mb-2">
+                                <img src="https://p3-search.byteimg.com/obj/labis/c446d491d3da8b1bb156f05a72395b5b" alt="芒果" class="w-full h-full object-cover rounded-lg">
+                                <span class="origin-badge">亚洲</span>
+                            </div>
+                            <h4 class="font-medium text-center">芒果</h4>
+                        </div>
+                        
+                        <div class="fruit-card card-hover bg-white rounded-xl shadow p-3 border border-gray-100" data-fruit="banana" data-type="2" data-name="香蕉" data-region="热带">
+                            <div class="relative h-24 mb-2">
+                                <img src="https://p3-search.byteimg.com/obj/labis/c2125f81de9459b78a4bc5c1a0bf724a" alt="香蕉" class="w-full h-full object-cover rounded-lg">
+                                <span class="origin-badge">热带</span>
+                            </div>
+                            <h4 class="font-medium text-center">香蕉</h4>
+                        </div>
+                        
+                        <div class="fruit-card card-hover bg-white rounded-xl shadow p-3 border border-gray-100" data-fruit="apple" data-type="2" data-name="苹果" data-region="全球">
+                            <div class="relative h-24 mb-2">
+                                <img src="https://p3-search.byteimg.com/obj/labis/5d415cd38677f7c654f0587b47df73c0" alt="苹果" class="w-full h-full object-cover rounded-lg">
+                                <span class="origin-badge">全球</span>
+                            </div>
+                            <h4 class="font-medium text-center">苹果</h4>
+                        </div>
+                        
+                        <div class="fruit-card card-hover bg-white rounded-xl shadow p-3 border border-gray-100" data-fruit="orange" data-type="2" data-name="橙" data-region="全球">
+                            <div class="relative h-24 mb-2">
+                                <img src="https://p3-search.byteimg.com/obj/labis/4b1f1d80956acdaec9bdd365973fc08c" alt="橙" class="w-full h-full object-cover rounded-lg">
+                                <span class="origin-badge">全球</span>
+                            </div>
+                            <h4 class="font-medium text-center">橙</h4>
+                        </div>
+                        
+                        <!-- 新增全球水果 -->
+                        <div class="fruit-card card-hover bg-white rounded-xl shadow p-3 border border-gray-100" data-fruit="avocado" data-type="2" data-name="牛油果" data-region="美洲">
+                            <div class="relative h-24 mb-2">
+                                <img src="https://p3-search.byteimg.com/obj/labis/c5245528a53dba9e450c660de2ee1522" alt="牛油果" class="w-full h-full object-cover rounded-lg">
+                                <span class="origin-badge">美洲</span>
+                            </div>
+                            <h4 class="font-medium text-center">牛油果</h4>
+                        </div>
+                        
+                        <div class="fruit-card card-hover bg-white rounded-xl shadow p-3 border border-gray-100" data-fruit="pineapple" data-type="2" data-name="菠萝" data-region="热带">
+                            <div class="relative h-24 mb-2">
+                                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/code_assistant/8460336a8e444eafa3d9ad4fbfeec3ff~tplv-a9rns2rl98-image.image?rcl=20250811190630C61049F99EDC7BCE712A&amp;rk3s=8e244e95&amp;rrcfp=2609e108&amp;x-expires=1755515194&amp;x-signature=oLCeZzf3XLEgYVQQY2k%2FR4d%2FjS8%3D" alt="菠萝" class="w-full h-full object-cover rounded-lg">
+                                <span class="origin-badge">热带</span>
+                            </div>
+                            <h4 class="font-medium text-center">菠萝</h4>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 第三类：嗅触检测 -->
+                <section class="mb-8">
+                    <div class="flex items-center mb-4">
+                        <div class="w-10 h-10 rounded-full bg-tertiary/10 flex items-center justify-center mr-3">
+                            <i class="fa fa-hand-paper-o text-tertiary"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold">嗅触检测</h3>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="fruit-card card-hover bg-white rounded-xl shadow p-3 border border-gray-100" data-fruit="kiwi" data-type="3" data-name="奇异果" data-region="大洋洲">
+                            <div class="relative h-24 mb-2">
+                                <img src="https://p3-search.byteimg.com/obj/labis/3cf4bcc1b241ae16d21a455f2882fcde" alt="奇异果" class="w-full h-full object-cover rounded-lg">
+                                <span class="origin-badge">大洋洲</span>
+                            </div>
+                            <h4 class="font-medium text-center">奇异果</h4>
+                        </div>
+                        
+                        <div class="fruit-card card-hover bg-white rounded-xl shadow p-3 border border-gray-100" data-fruit="pear" data-type="3" data-name="梨" data-region="亚洲">
+                            <div class="relative h-24 mb-2">
+                                <img src="https://p3-search.byteimg.com/obj/pgc-image/4c490f5ba48b4d698eaefc6f03a4fa74" alt="梨" class="w-full h-full object-cover rounded-lg">
+                                <span class="origin-badge">亚洲</span>
+                            </div>
+                            <h4 class="font-medium text-center">梨</h4>
+                        </div>
+                        
+                        <div class="fruit-card card-hover bg-white rounded-xl shadow p-3 border border-gray-100" data-fruit="peach" data-type="3" data-name="桃" data-region="亚洲">
+                            <div class="relative h-24 mb-2">
+                                <img src="https://p3-search.byteimg.com/obj/labis/a7c040f95f0bad32ae466b4382d14666" alt="桃" class="w-full h-full object-cover rounded-lg">
+                                <span class="origin-badge">亚洲</span>
+                            </div>
+                            <h4 class="font-medium text-center">桃</h4>
+                        </div>
+                        
+                        <!-- 新增全球水果 -->
+                        <div class="fruit-card card-hover bg-white rounded-xl shadow p-3 border border-gray-100" data-fruit="mangosteen" data-type="3" data-name="山竹" data-region="东南亚">
+                            <div class="relative h-24 mb-2">
+                                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/code_assistant/d51902d15e664412b7fca8c555baea8c~tplv-a9rns2rl98-image.image?rcl=2025081119070777E15105589554B26789&amp;rk3s=8e244e95&amp;rrcfp=2609e108&amp;x-expires=1755515231&amp;x-signature=2ukrFNDiJ9iU4MSMbHAw7UqWY8I%3D" alt="山竹" class="w-full h-full object-cover rounded-lg">
+                                <span class="origin-badge">东南亚</span>
+                            </div>
+                            <h4 class="font-medium text-center">山竹</h4>
+                        </div>
+                        
+                        <div class="fruit-card card-hover bg-white rounded-xl shadow p-3 border border-gray-100" data-fruit="lychee" data-type="3" data-name="荔枝" data-region="亚洲">
+                            <div class="relative h-24 mb-2">
+                                <img src="https://p3-search.byteimg.com/obj/labis/41b7f5fb119bc542eb4c3b9b99a1a431" alt="荔枝" class="w-full h-full object-cover rounded-lg">
+                                <span class="origin-badge">亚洲</span>
+                            </div>
+                            <h4 class="font-medium text-center">荔枝</h4>
+                        </div>
+                        
+                        <div class="fruit-card card-hover bg-white rounded-xl shadow p-3 border border-gray-100" data-fruit="passionfruit" data-type="3" data-name="百香果" data-region="美洲">
+                            <div class="relative h-24 mb-2">
+                                <img src="https://p3-search.byteimg.com/obj/labis/26a19720103c1da84bb631cee632d861" alt="百香果" class="w-full h-full object-cover rounded-lg">
+                                <span class="origin-badge">美洲</span>
+                            </div>
+                            <h4 class="font-medium text-center">百香果</h4>
+                        </div>
+                    </div>
+                </section>
+            </main>
+            
+            <!-- 底部导航 -->
+            <footer class="bg-white p-4 border-t border-gray-200 fixed bottom-0 w-full max-w-md">
+                <div class="flex justify-around">
+                    <button class="flex flex-col items-center text-primary">
+                        <i class="fa fa-home text-xl mb-1"></i>
+                        <span class="text-xs">首页</span>
+                    </button>
+                    <button class="flex flex-col items-center text-gray-400">
+                        <i class="fa fa-history text-xl mb-1"></i>
+                        <span class="text-xs">历史</span>
+                    </button>
+                    <button class="flex flex-col items-center text-gray-400">
+                        <i class="fa fa-cog text-xl mb-1"></i>
+                        <span class="text-xs">设置</span>
+                    </button>
+                </div>
+            </footer>
+        </div>
+        
+        <!-- 水果详情确认界面 -->
+        <div id="fruit-confirmation" class="h-full min-h-screen hidden p-6">
+            <header class="flex justify-between items-center mb-6">
+                <button id="back-to-selection" class="p-2 rounded-full hover:bg-gray-100 transition-colors">
+                    <i class="fa fa-arrow-left text-lg"></i>
+                </button>
+                <h2 class="text-xl font-semibold">确认水果</h2>
+                <div class="w-8"></div> <!-- 占位元素，保持标题居中 -->
+            </header>
+            
+            <div class="text-center mb-8">
+                <div class="w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden shadow-lg">
+                    <img id="confirm-fruit-img" src="https://picsum.photos/seed/watermelon/200/200" alt="水果图片" class="w-full h-full object-cover">
+                </div>
+                <h3 id="confirm-fruit-name" class="text-2xl font-bold mb-2">柚子</h3>
+                <p id="confirm-fruit-origin" class="text-gray-500 text-sm mb-3">产地：亚洲</p>
+                <p id="confirm-fruit-desc" class="text-gray-600">拍打检测：通过声音频率判断成熟度</p>
+            </div>
+            
+            <div class="mt-10">
+                <button id="start-detection" class="w-full py-4 bg-primary text-white rounded-full font-semibold text-lg shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300">
+                    开始检测
+                </button>
+                
+                <button id="change-fruit" class="w-full py-3 mt-3 border border-gray-300 text-gray-700 rounded-full font-medium transition-colors hover:bg-gray-50">
+                    更换水果
+                </button>
+            </div>
+        </div>
+        
+        <!-- 第一类：拍打检测界面 -->
+        <div id="tap-detection" class="h-full min-h-screen hidden p-6">
+            <header class="flex justify-between items-center mb-6">
+                <button id="back-from-tap" class="p-2 rounded-full hover:bg-gray-100 transition-colors">
+                    <i class="fa fa-arrow-left text-lg"></i>
+                </button>
+                <h2 class="text-xl font-semibold">拍打检测</h2>
+                <button id="help-tap" class="p-2 rounded-full hover:bg-gray-100 transition-colors">
+                    <i class="fa fa-question text-lg"></i>
+                </button>
+            </header>
+            
+            <div class="text-center mb-8">
+                <h3 id="tap-fruit-name" class="text-xl font-bold mb-2">西瓜</h3>
+                <p class="text-gray-600 mb-6">请按指示拍打水果，录制声音以分析成熟度</p>
+                
+                <div class="w-40 h-40 mx-auto mb-6 relative">
+                    <div class="absolute inset-0 rounded-full border-4 border-primary/30 animate-ping opacity-75"></div>
+                    <div class="absolute inset-4 rounded-full bg-primary/10 flex items-center justify-center">
+                        <i class="fa fa-volume-up text-4xl text-primary"></i>
+                    </div>
+                </div>
+                
+                <p class="text-gray-700 mb-2">手持手机，距离水果20cm</p>
+                <p class="text-gray-700">轻拍3次，录制声音</p>
+            </div>
+            
+            <div class="mt-8">
+                <button id="record-btn" class="w-20 h-20 mx-auto bg-primary rounded-full shadow-lg flex items-center justify-center text-white text-2xl hover:bg-primary/90 transition-colors">
+                    <i class="fa fa-microphone"></i>
+                </button>
+                <p class="text-center mt-4 text-gray-500 text-sm" id="record-status">点击开始录音</p>
+            </div>
+            
+            <div id="recording-indicator" class="hidden mt-8 text-center">
+                <div class="w-16 h-1 bg-gray-200 rounded-full mx-auto mb-2">
+                    <div class="sound-wave h-full bg-primary rounded-full w-1/2 animate-pulse"></div>
+                </div>
+                <p class="text-primary font-medium">正在录音...</p>
+            </div>
+            
+            <div id="after-recording" class="hidden mt-8">
+                <div class="flex justify-center gap-4">
+                    <button id="retry-record" class="py-3 px-6 border border-gray-300 text-gray-700 rounded-full font-medium transition-colors hover:bg-gray-50">
+                        <i class="fa fa-refresh mr-2"></i>重录
+                    </button>
+                    <button id="confirm-record" class="py-3 px-6 bg-primary text-white rounded-full font-medium transition-colors hover:bg-primary/90">
+                        确认<i class="fa fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 拍打检测信息输入界面 -->
+        <div id="tap-info-input" class="h-full min-h-screen hidden p-6">
+            <header class="flex justify-between items-center mb-6">
+                <button id="back-from-tap-info" class="p-2 rounded-full hover:bg-gray-100 transition-colors">
+                    <i class="fa fa-arrow-left text-lg"></i>
+                </button>
+                <h2 class="text-xl font-semibold">补充信息</h2>
+                <div class="w-8"></div>
+            </header>
+            
+            <div class="mb-8">
+                <h3 id="info-fruit-name" class="text-xl font-bold mb-4">西瓜</h3>
+                <p class="text-gray-600 mb-6">请提供以下信息，帮助AI更准确分析</p>
+                
+                <!-- 质量输入 -->
+                <div class="mb-8">
+                    <label class="block text-gray-700 font-medium mb-2">质量</label>
+                    <div class="flex items-center">
+                        <input type="range" id="weight-slider" min="1" max="10" value="5" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary">
+                        <span id="weight-value" class="ml-4 text-gray-700 font-medium">5kg</span>
+                    </div>
+                </div>
+                
+                <!-- 产地选择 -->
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">产地</label>
+                    <select id="origin-select" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary">
+                        <option value="">请选择产地</option>
+                        <option value="local">本地</option>
+                        <option value="hainan">海南</option>
+                        <option value="taiwan">台湾</option>
+                        <option value="thailand">泰国</option>
+                        <option value="brazil">巴西</option>
+                        <option value="usa">美国</option>
+                        <option value="australia">澳大利亚</option>
+                        <option value="other">其他</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="mt-10">
+                <button id="analyze-tap" class="w-full py-4 bg-primary text-white rounded-full font-semibold text-lg shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300">
+                    分析生熟度
+                </button>
+            </div>
+        </div>
+        
+        <!-- 第二类：外观检测界面 -->
+        <div id="visual-detection" class="h-full min-h-screen hidden p-6">
+            <header class="flex justify-between items-center mb-6">
+                <button id="back-from-visual" class="p-2 rounded-full hover:bg-gray-100 transition-colors">
+                    <i class="fa fa-arrow-left text-lg"></i>
+                </button>
+                <h2 class="text-xl font-semibold">外观检测</h2>
+                <button id="help-visual" class="p-2 rounded-full hover:bg-gray-100 transition-colors">
+                    <i class="fa fa-question text-lg"></i>
+                </button>
+            </header>
+            
+            <div class="text-center mb-6">
+                <h3 id="visual-fruit-name" class="text-xl font-bold mb-2">芒果</h3>
+                <p class="text-gray-600 mb-4" id="visual-instruction">请拍摄正面、侧面两张照片，展示果皮颜色和纹理</p>
+                
+                <div class="relative w-full rounded-xl overflow-hidden border-2 border-dashed border-gray-300 mb-4 aspect-square">
+                    <img id="preview-image" src="" alt="预览照片" class="hidden w-full h-full object-cover">
+                    <div id="camera-placeholder" class="w-full h-full flex flex-col items-center justify-center">
+                        <i class="fa fa-camera text-5xl text-gray-400 mb-3"></i>
+                        <p class="text-gray-500">点击拍照</p>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center gap-3 mb-6">
+                    <button id="flash-toggle" class="p-3 rounded-full bg-gray-100 text-gray-700">
+                        <i class="fa fa-lightbulb-o"></i>
+                    </button>
+                    <button id="zoom-in" class="p-3 rounded-full bg-gray-100 text-gray-700">
+                        <i class="fa fa-search-plus"></i>
+                    </button>
+                    <button id="zoom-out" class="p-3 rounded-full bg-gray-100 text-gray-700">
+                        <i class="fa fa-search-minus"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <button id="take-photo" class="w-full py-4 bg-secondary text-white rounded-full font-semibold text-lg shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300">
+                    <i class="fa fa-camera mr-2"></i>拍照
+                </button>
+                
+                <div id="photo-actions" class="hidden flex justify-center gap-4 mt-4">
+                    <button id="retake-photo" class="py-3 px-6 border border-gray-300 text-gray-700 rounded-full font-medium transition-colors hover:bg-gray-50">
+                        重拍
+                    </button>
+                    <button id="confirm-photo" class="py-3 px-6 bg-secondary text-white rounded-full font-medium transition-colors hover:bg-secondary/90">
+                        确认并继续
+                    </button>
+                </div>
+                
+                <div id="photo-count" class="text-center mt-4 text-gray-500 text-sm">
+                    已拍摄 <span id="taken-count">0</span>/<span id="required-count">2</span> 张照片
+                </div>
+            </div>
+        </div>
+        
+        <!-- 外观检测文字补充界面 -->
+        <div id="visual-info-input" class="h-full min-h-screen hidden p-6">
+            <header class="flex justify-between items-center mb-6">
+                <button id="back-from-visual-info" class="p-2 rounded-full hover:bg-gray-100 transition-colors">
+                    <i class="fa fa-arrow-left text-lg"></i>
+                </button>
+                <h2 class="text-xl font-semibold">补充描述</h2>
+                <div class="w-8"></div>
+            </header>
+            
+            <div class="mb-6">
+                <h3 id="visual-info-fruit-name" class="text-xl font-bold mb-4">芒果</h3>
+                <p class="text-gray-600 mb-6">请补充以下信息，帮助AI更准确分析</p>
+                
+                <!-- 斑点情况 -->
+                <div class="mb-6">
+                    <label class="block text-gray-700 font-medium mb-2">是否有斑点？</label>
+                    <div class="grid grid-cols-3 gap-3">
+                        <label class="border border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:bg-gray-50 transition-colors">
+                            <input type="radio" name="spots" value="none" class="hidden">
+                            <span class="block">无</span>
+                        </label>
+                        <label class="border border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:bg-gray-50 transition-colors">
+                            <input type="radio" name="spots" value="few" class="hidden">
+                            <span class="block">少量</span>
+                        </label>
+                        <label class="border border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:bg-gray-50 transition-colors">
+                            <input type="radio" name="spots" value="many" class="hidden">
+                            <span class="block">较多</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- 颜色偏向 -->
+                <div class="mb-6">
+                    <label class="block text-gray-700 font-medium mb-2">颜色偏向？</label>
+                    <select id="color-select" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary">
+                        <option value="">请选择颜色</option>
+                        <option value="green">青</option>
+                        <option value="yellow">黄</option>
+                        <option value="orange">橙红</option>
+                        <option value="purple">紫色</option>
+                        <option value="red">红色</option>
+                        <option value="brown">棕色</option>
+                    </select>
+                </div>
+                
+                <!-- 其他特征 -->
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">其他特征（可选）</label>
+                    <textarea id="other-features" rows="3" placeholder="请描述其他观察到的特征..." class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary"></textarea>
+                </div>
+            </div>
+            
+            <div class="mt-6">
+                <button id="analyze-visual" class="w-full py-4 bg-secondary text-white rounded-full font-semibold text-lg shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300">
+                    分析生熟度
+                </button>
+            </div>
+        </div>
+        
+        <!-- 第三类：嗅触检测界面 -->
+        <div id="smell-touch-detection" class="h-full min-h-screen hidden p-6">
+            <header class="flex justify-between items-center mb-6">
+                <button id="back-from-smell-touch" class="p-2 rounded-full hover:bg-gray-100 transition-colors">
+                    <i class="fa fa-arrow-left text-lg"></i>
+                </button>
+                <h2 class="text-xl font-semibold">嗅触检测指南</h2>
+                <div class="w-8"></div>
+            </header>
+            
+            <div class="mb-6">
+                <h3 id="smell-touch-fruit-name" class="text-xl font-bold mb-4">奇异果</h3>
+                <p class="text-gray-600 mb-6">请根据以下指南判断水果的成熟度，并选择符合的选项</p>
+                
+                <!-- 触觉指南 -->
+                <div class="mb-8 bg-tertiary/5 rounded-xl p-5 border border-tertiary/20">
+                    <div class="flex items-center mb-3">
+                        <div class="w-10 h-10 rounded-full bg-tertiary/10 flex items-center justify-center mr-3">
+                            <i class="fa fa-hand-paper-o text-tertiary"></i>
+                        </div>
+                        <h4 class="font-semibold text-lg">触觉判断 - 请选择您观察到的状态</h4>
+                    </div>
+                    
+                    <ul class="space-y-3 text-gray-700">
+                        <li class="flex">
+                            <i class="fa fa-circle text-xs text-gray-400 mt-1.5 mr-2"></i>
+                            <span><strong>未熟：</strong>坚硬，按压无弹性</span>
+                        </li>
+                        <li class="flex">
+                            <i class="fa fa-circle text-xs text-gray-400 mt-1.5 mr-2"></i>
+                            <span><strong>成熟：</strong>稍软，轻按有轻微凹陷</span>
+                        </li>
+                        <li class="flex">
+                            <i class="fa fa-circle text-xs text-gray-400 mt-1.5 mr-2"></i>
+                            <span><strong>过熟：</strong>软烂，按压有明显凹陷</span>
+                        </li>
+                    </ul>
+                    
+                    <div class="mt-6">
+                        <p class="font-medium mb-3">您的选择：</p>
+                        <div class="grid grid-cols-3 gap-3 touch-options">
+                            <div class="touch-option border-2 border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:bg-gray-50 transition-all" data-option="unripe">
+                                <div class="relative h-20 mb-2">
+                                    <img src="https://picsum.photos/seed/kiwi1/100/100" alt="未熟奇异果" class="w-full h-full object-cover rounded">
+                                </div>
+                                <p class="text-sm">未熟</p>
+                            </div>
+                            <div class="touch-option border-2 border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:bg-gray-50 transition-all" data-option="ripe">
+                                <div class="relative h-20 mb-2">
+                                    <img src="https://picsum.photos/seed/kiwi2/100/100" alt="成熟奇异果" class="w-full h-full object-cover rounded">
+                                </div>
+                                <p class="text-sm">成熟</p>
+                            </div>
+                            <div class="touch-option border-2 border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:bg-gray-50 transition-all" data-option="overripe">
+                                <div class="relative h-20 mb-2">
+                                    <img src="https://picsum.photos/seed/kiwi3/100/100" alt="过熟奇异果" class="w-full h-full object-cover rounded">
+                                </div>
+                                <p class="text-sm">过熟</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 嗅觉指南 -->
+                <div class="mb-8 bg-tertiary/5 rounded-xl p-5 border border-tertiary/20">
+                    <div class="flex items-center mb-3">
+                        <div class="w-10 h-10 rounded-full bg-tertiary/10 flex items-center justify-center mr-3">
+                            <i class="fa fa-smell text-tertiary"></i>
+                        </div>
+                        <h4 class="font-semibold text-lg">嗅觉判断 - 请选择您闻到的气味</h4>
+                    </div>
+                    
+                    <ul class="space-y-3 text-gray-700">
+                        <li class="flex">
+                            <i class="fa fa-circle text-xs text-gray-400 mt-1.5 mr-2"></i>
+                            <span><strong>未熟：</strong>无明显气味</span>
+                        </li>
+                        <li class="flex">
+                            <i class="fa fa-circle text-xs text-gray-400 mt-1.5 mr-2"></i>
+                            <span><strong>成熟：</strong>散发淡淡果香</span>
+                        </li>
+                        <li class="flex">
+                            <i class="fa fa-circle text-xs text-gray-400 mt-1.5 mr-2"></i>
+                            <span><strong>过熟：</strong>有发酵味或酸味</span>
+                        </li>
+                    </ul>
+                    
+                    <div class="mt-6">
+                        <p class="font-medium mb-3">您的选择：</p>
+                        <div class="grid grid-cols-3 gap-3 smell-options">
+                            <div class="smell-option border-2 border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:bg-gray-50 transition-all" data-option="unripe">
+                                <i class="fa fa-ban text-2xl mb-2 text-gray-400"></i>
+                                <p class="text-sm">无明显气味</p>
+                            </div>
+                            <div class="smell-option border-2 border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:bg-gray-50 transition-all" data-option="ripe">
+                                <i class="fa fa-leaf text-2xl mb-2 text-green-500"></i>
+                                <p class="text-sm">淡淡果香</p>
+                            </div>
+                            <div class="smell-option border-2 border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:bg-gray-50 transition-all" data-option="overripe">
+                                <i class="fa fa-warning text-2xl mb-2 text-yellow-500"></i>
+                                <p class="text-sm">发酵/酸味</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 自查清单 -->
+                <div class="mb-6">
+                    <h4 class="font-semibold text-lg mb-3">自查清单</h4>
+                    <div class="space-y-3">
+                        <label class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <input type="checkbox" class="mr-3 accent-tertiary">
+                            <span>有果香</span>
+                        </label>
+                        <label class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <input type="checkbox" class="mr-3 accent-tertiary">
+                            <span>按压微软</span>
+                        </label>
+                        <label class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <input type="checkbox" class="mr-3 accent-tertiary">
+                            <span>表皮有光泽</span>
+                        </label>
+                        <label class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <input type="checkbox" class="mr-3 accent-tertiary">
+                            <span>无软烂区域</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <div>
+                <button id="get-smell-touch-advice" class="w-full py-4 bg-tertiary text-white rounded-full font-semibold text-lg shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300">
+                    获取综合建议
+                </button>
+            </div>
+        </div>
+        
+        <!-- 结果界面 -->
+        <div id="result-screen" class="h-full min-h-screen hidden p-6">
+            <header class="flex justify-between items-center mb-6">
+                <button id="back-from-result" class="p-2 rounded-full hover:bg-gray-100 transition-colors">
+                    <i class="fa fa-arrow-left text-lg"></i>
+                </button>
+                <h2 class="text-xl font-semibold">检测结果</h2>
+                <button id="share-result" class="p-2 rounded-full hover:bg-gray-100 transition-colors">
+                    <i class="fa fa-share-alt text-lg"></i>
+                </button>
+            </header>
+            
+            <div class="text-center mb-8">
+                <div class="w-24 h-24 mx-auto mb-4 rounded-full overflow-hidden shadow-lg">
+                    <img id="result-fruit-img" src="https://picsum.photos/seed/watermelon/200/200" alt="水果图片" class="w-full h-full object-cover">
+                </div>
+                <h3 id="result-fruit-name" class="text-2xl font-bold mb-2">西瓜</h3>
+                
+                <!-- 结果评分 -->
+                <div class="mt-6 mb-8">
+                    <div class="flex justify-center items-end mb-2">
+                        <span id="ripeness-score" class="text-5xl font-bold text-primary">8</span>
+                        <span class="text-xl text-gray-500 ml-1 mb-1">/10</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-3 mb-1">
+                        <div id="ripeness-bar" class="bg-primary h-3 rounded-full" style="width: 80%"></div>
+                    </div>
+                    <p id="ripeness-level" class="text-lg font-medium text-primary">成熟</p>
+                </div>
+                
+                <!-- 结果建议 -->
+                <div class="bg-gray-50 rounded-xl p-5 border border-gray-100 mb-6">
+                    <h4 class="font-semibold text-gray-800 mb-2">建议</h4>
+                    <p id="ripeness-advice" class="text-gray-600">8分（成熟）：甜度高，适合立即食用。冷藏后口感更佳。</p>
+                </div>
+                
+                <!-- 反馈 -->
+                <div class="mb-6">
+                    <p class="text-gray-600 mb-3">结果准确吗？</p>
+                    <div class="flex justify-center gap-3">
+                        <button class="feedback-btn py-2 px-4 bg-green-100 text-green-700 rounded-full text-sm" data-feedback="accurate">
+                            准确
+                        </button>
+                        <button class="feedback-btn py-2 px-4 bg-yellow-100 text-yellow-700 rounded-full text-sm" data-feedback="high">
+                            偏高
+                        </button>
+                        <button class="feedback-btn py-2 px-4 bg-red-100 text-red-700 rounded-full text-sm" data-feedback="low">
+                            偏低
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="feedback-input" class="hidden mb-6">
+                <label class="block text-gray-700 font-medium mb-2">请告诉我们原因（可选）</label>
+                <textarea rows="2" placeholder="例如：实际切开是生的，但评分显示成熟..." class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"></textarea>
+                <div class="flex justify-end mt-2">
+                    <button id="submit-feedback" class="py-2 px-4 bg-primary text-white rounded-full text-sm">
+                        提交
+                    </button>
+                </div>
+            </div>
+            
+            <div class="flex gap-4">
+                <button id="new-detection" class="flex-1 py-4 bg-gray-100 text-gray-700 rounded-full font-semibold transition-colors hover:bg-gray-200">
+                    检测新水果
+                </button>
+                <button id="batch-detection" class="flex-1 py-4 bg-primary text-white rounded-full font-semibold transition-colors hover:bg-primary/90">
+                    继续检测
+                </button>
+            </div>
+        </div>
+        
+        <!-- 水果知识库 -->
+        <div id="knowledge-base" class="h-full min-h-screen hidden p-6">
+            <header class="flex justify-between items-center mb-6">
+                <button id="back-from-knowledge" class="p-2 rounded-full hover:bg-gray-100 transition-colors">
+                    <i class="fa fa-arrow-left text-lg"></i>
+                </button>
+                <h2 class="text-xl font-semibold">水果知识库</h2>
+                <div class="w-8"></div>
+            </header>
+            
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold mb-4">生熟保存技巧</h3>
+                
+                <div class="space-y-4">
+                    <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+                        <h4 class="font-medium text-gray-800 mb-2">西瓜</h4>
+                        <p class="text-gray-600 text-sm">成熟西瓜应冷藏保存，切开后需用保鲜膜覆盖，3天内食用完毕。未切开的西瓜可在阴凉处存放1-2周。</p>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+                        <h4 class="font-medium text-gray-800 mb-2">芒果</h4>
+                        <p class="text-gray-600 text-sm">未熟芒果可室温存放，与苹果同放可加速成熟。成熟芒果需冷藏，最好2-3天内食用完毕。</p>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+                        <h4 class="font-medium text-gray-800 mb-2">奇异果</h4>
+                        <p class="text-gray-600 text-sm">未熟奇异果可放入纸袋中加速成熟，成熟后需冷藏保存，可存放2-3周。</p>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+                        <h4 class="font-medium text-gray-800 mb-2">香蕉</h4>
+                        <p class="text-gray-600 text-sm">香蕉室温保存即可，用保鲜膜包裹顶部可延缓成熟。成熟过快可放入冰箱，但果皮会变黑，果肉仍可食用。</p>
+                    </div>
+                    
+                    <!-- 新增全球水果知识 -->
+                    <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+                        <h4 class="font-medium text-gray-800 mb-2">牛油果</h4>
+                        <p class="text-gray-600 text-sm">未熟牛油果可室温存放，与香蕉同放可加速成熟。成熟后需冷藏，可存放3-5天。切开的牛油果可涂柠檬汁防止氧化变色。</p>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+                        <h4 class="font-medium text-gray-800 mb-2">榴莲</h4>
+                        <p class="text-gray-600 text-sm">未熟榴莲可室温存放，用报纸包裹可加速成熟。成熟榴莲需冷藏，可存放3-5天，建议密封保存以避免气味扩散。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 商户模式提示 -->
+        <div id="merchant-mode-toast" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-dark text-white px-6 py-3 rounded-full shadow-lg hidden z-50">
+            已切换到商户模式
+        </div>
+    </div>
+
+    <script>
+        // 当前选中的水果和类型
+        let currentFruit = {
+            name: '',
+            type: 0,
+            image: '',
+            region: ''
+        };
+        
+        // 所有水果数据（用于搜索建议）
+        const allFruits = [
+            {name: '西瓜', region: '亚洲'},
+            {name: '椰子', region: '亚洲'},
+            {name: '哈密瓜', region: '亚洲'},
+            {name: '柚子', region: '亚洲'},
+            {name: '榴莲', region: '东南亚'},
+            {name: '芒果', region: '亚洲'},
+            {name: '香蕉', region: '热带'},
+            {name: '苹果', region: '全球'},
+            {name: '橙', region: '全球'},
+            {name: '牛油果', region: '美洲'},
+            {name: '菠萝', region: '热带'},
+            {name: '奇异果', region: '大洋洲'},
+            {name: '梨', region: '亚洲'},
+            {name: '桃', region: '亚洲'},
+            {name: '山竹', region: '东南亚'},
+            {name: '荔枝', region: '亚洲'},
+            {name: '百香果', region: '美洲'},
+            {name: '葡萄', region: '全球'},
+            {name: '草莓', region: '全球'},
+            {name: '蓝莓', region: '美洲'},
+            {name: '樱桃', region: '欧洲'},
+            {name: '火龙果', region: '美洲'},
+            {name: '龙眼', region: '亚洲'},
+            {name: '木瓜', region: '热带'},
+            {name: '柠檬', region: '亚洲'},
+            {name: '猕猴桃', region: '中国'},
+            {name: '柿子', region: '亚洲'},
+            {name: '石榴', region: '亚洲'},
+            {name: '葡萄柚', region: '美洲'},
+            {name: '杨桃', region: '亚洲'},
+            {name: '橄榄', region: '欧洲'},
+            {name: '杏子', region: '亚洲'},
+            {name: '李子', region: '全球'},
+            {name: '梅子', region: '亚洲'},
+            {name: '枇杷', region: '亚洲'},
+            {name: '无花果', region: '地中海'},
+            {name: '蔓越莓', region: '美洲'},
+            {name: '覆盆子', region: '欧洲'},
+            {name: '黑莓', region: '欧洲'},
+            {name: '番石榴', region: '美洲'},
+            {name: '人心果', region: '美洲'},
+            {name: '释迦果', region: '美洲'},
+            {name: '莲雾', region: '亚洲'},
+            {name: '红毛丹', region: '东南亚'},
+            {name: '蛇果', region: '美洲'},
+            {name: '沙棘', region: '亚洲'},
+            {name: '蔓越莓', region: '美洲'},
+            {name: '牛油果', region: '美洲'},
+            {name: '腰果', region: '美洲'},
+            {name: '开心果', region: '亚洲'}
+        ];
+        
+        // 照片计数
+        let photoCount = 0;
+        const requiredPhotos = 2; // 默认需要2张照片
+        
+        // 保存用户的触觉和嗅觉选择
+        let userSelections = {
+            touch: '',
+            smell: ''
+        };
+        
+        // DOM 元素
+        const homeScreen = document.getElementById('home-screen');
+        const fruitSelection = document.getElementById('fruit-selection');
+        const fruitConfirmation = document.getElementById('fruit-confirmation');
+        const tapDetection = document.getElementById('tap-detection');
+        const tapInfoInput = document.getElementById('tap-info-input');
+        const visualDetection = document.getElementById('visual-detection');
+        const visualInfoInput = document.getElementById('visual-info-input');
+        const smellTouchDetection = document.getElementById('smell-touch-detection');
+        const resultScreen = document.getElementById('result-screen');
+        const knowledgeBase = document.getElementById('knowledge-base');
+        
+        // 导航按钮
+        document.getElementById('start-btn').addEventListener('click', () => {
+            homeScreen.classList.add('hidden');
+            fruitSelection.classList.remove('hidden');
+        });
+        
+        document.getElementById('back-to-home').addEventListener('click', () => {
+            fruitSelection.classList.add('hidden');
+            homeScreen.classList.remove('hidden');
+        });
+        
+        document.getElementById('back-to-selection').addEventListener('click', () => {
+            fruitConfirmation.classList.add('hidden');
+            fruitSelection.classList.remove('hidden');
+        });
+        
+        document.getElementById('back-from-tap').addEventListener('click', () => {
+            tapDetection.classList.add('hidden');
+            fruitConfirmation.classList.remove('hidden');
+        });
+        
+        document.getElementById('back-from-tap-info').addEventListener('click', () => {
+            tapInfoInput.classList.add('hidden');
+            tapDetection.classList.remove('hidden');
+        });
+        
+        document.getElementById('back-from-visual').addEventListener('click', () => {
+            visualDetection.classList.add('hidden');
+            fruitConfirmation.classList.remove('hidden');
+        });
+        
+        document.getElementById('back-from-visual-info').addEventListener('click', () => {
+            visualInfoInput.classList.add('hidden');
+            visualDetection.classList.remove('hidden');
+        });
+        
+        document.getElementById('back-from-smell-touch').addEventListener('click', () => {
+            smellTouchDetection.classList.add('hidden');
+            fruitConfirmation.classList.remove('hidden');
+        });
+        
+        document.getElementById('back-from-result').addEventListener('click', () => {
+            resultScreen.classList.add('hidden');
+            // 根据当前水果类型返回相应的检测界面
+            if (currentFruit.type === 1) {
+                tapInfoInput.classList.remove('hidden');
+            } else if (currentFruit.type === 2) {
+                visualInfoInput.classList.remove('hidden');
+            } else {
+                smellTouchDetection.classList.remove('hidden');
+            }
+        });
+        
+        document.getElementById('knowledge-btn').addEventListener('click', () => {
+            fruitSelection.classList.add('hidden');
+            knowledgeBase.classList.remove('hidden');
+        });
+        
+        document.getElementById('back-from-knowledge').addEventListener('click', () => {
+            knowledgeBase.classList.add('hidden');
+            fruitSelection.classList.remove('hidden');
+        });
+        
+        // 水果卡片点击事件
+        document.querySelectorAll('.fruit-card').forEach(card => {
+            card.addEventListener('click', () => {
+                // 获取水果信息
+                const fruitName = card.dataset.name;
+                const fruitType = parseInt(card.dataset.type);
+                const fruitImg = card.querySelector('img').src;
+                const fruitRegion = card.dataset.region;
+                
+                // 保存当前水果信息
+                currentFruit = {
+                    name: fruitName,
+                    type: fruitType,
+                    image: fruitImg,
+                    region: fruitRegion
+                };
+                
+                // 更新确认界面
+                document.getElementById('confirm-fruit-name').textContent = fruitName;
+                document.getElementById('confirm-fruit-img').src = fruitImg;
+                document.getElementById('confirm-fruit-origin').textContent = `产地：${fruitRegion}`;
+                
+                // 设置水果描述
+                let description = '';
+                if (fruitType === 1) {
+                    description = '拍打检测：通过声音频率判断成熟度';
+                } else if (fruitType === 2) {
+                    description = '外观检测：通过颜色、纹理判断成熟度';
+                } else {
+                    description = '嗅触检测：通过气味和触感判断成熟度';
+                }
+                document.getElementById('confirm-fruit-desc').textContent = description;
+                
+                // 切换到确认界面
+                fruitSelection.classList.add('hidden');
+                fruitConfirmation.classList.remove('hidden');
+            });
+        });
+        
+        // 开始检测按钮
+        document.getElementById('start-detection').addEventListener('click', () => {
+            fruitConfirmation.classList.add('hidden');
+            
+            // 根据水果类型显示相应的检测界面
+            if (currentFruit.type === 1) {
+                // 拍打检测
+                document.getElementById('tap-fruit-name').textContent = currentFruit.name;
+                tapDetection.classList.remove('hidden');
+            } else if (currentFruit.type === 2) {
+                // 外观检测
+                document.getElementById('visual-fruit-name').textContent = currentFruit.name;
+                
+                // 根据水果设置不同的拍照指示
+                let instruction = '';
+                if (currentFruit.name === '芒果') {
+                    instruction = '请拍摄正面、侧面两张照片，展示果皮颜色和纹理';
+                } else if (currentFruit.name === '香蕉') {
+                    instruction = '请拍摄整串香蕉，确保清晰显示果皮颜色和斑点';
+                } else if (currentFruit.name === '苹果') {
+                    instruction = '请拍摄苹果的正面照片，展示果皮颜色和光泽';
+                } else if (currentFruit.name === '橙') {
+                    instruction = '请拍摄橙子的正面照片，展示果皮颜色和纹理';
+                } else if (currentFruit.name === '牛油果') {
+                    instruction = '请拍摄牛油果的正面和顶部照片，展示果皮颜色和硬度';
+                } else if (currentFruit.name === '菠萝') {
+                    instruction = '请拍摄菠萝整体和底部照片，展示颜色和硬度';
+                }
+                document.getElementById('visual-instruction').textContent = instruction;
+                
+                // 重置照片计数
+                photoCount = 0;
+                document.getElementById('taken-count').textContent = '0';
+                document.getElementById('required-count').textContent = requiredPhotos;
+                
+                visualDetection.classList.remove('hidden');
+            } else {
+                // 嗅触检测
+                document.getElementById('smell-touch-fruit-name').textContent = currentFruit.name;
+                smellTouchDetection.classList.remove('hidden');
+                
+                // 重置选择状态
+                userSelections = {
+                    touch: '',
+                    smell: ''
+                };
+                document.querySelectorAll('.touch-option, .smell-option').forEach(option => {
+                    option.classList.remove('option-selected');
+                });
+            }
+        });
+        
+        // 更换水果按钮
+        document.getElementById('change-fruit').addEventListener('click', () => {
+            fruitConfirmation.classList.add('hidden');
+            fruitSelection.classList.remove('hidden');
+        });
+        
+        // 录音功能模拟
+        const recordBtn = document.getElementById('record-btn');
+        const recordStatus = document.getElementById('record-status');
+        const recordingIndicator = document.getElementById('recording-indicator');
+        const afterRecording = document.getElementById('after-recording');
+        
+        let isRecording = false;
+        let recordingTimeout;
+        
+        recordBtn.addEventListener('click', () => {
+            if (!isRecording) {
+                // 开始录音
+                isRecording = true;
+                recordBtn.innerHTML = '<i class="fa fa-stop"></i>';
+                recordBtn.classList.add('bg-red-500');
+                recordBtn.classList.remove('bg-primary');
+                recordStatus.textContent = '正在录音...';
+                recordingIndicator.classList.remove('hidden');
+                
+                // 模拟5秒后自动停止录音
+                recordingTimeout = setTimeout(() => {
+                    stopRecording();
+                }, 5000);
+            } else {
+                // 手动停止录音
+                clearTimeout(recordingTimeout);
+                stopRecording();
+            }
+        });
+        
+        function stopRecording() {
+            isRecording = false;
+            recordBtn.innerHTML = '<i class="fa fa-microphone"></i>';
+            recordBtn.classList.remove('bg-red-500');
+            recordBtn.classList.add('bg-primary');
+            recordStatus.textContent = '录音完成';
+            recordingIndicator.classList.add('hidden');
+            afterRecording.classList.remove('hidden');
+        }
+        
+        // 重录按钮
+        document.getElementById('retry-record').addEventListener('click', () => {
+            afterRecording.classList.add('hidden');
+            recordStatus.textContent = '点击开始录音';
+        });
+        
+        // 确认录音按钮
+        document.getElementById('confirm-record').addEventListener('click', () => {
+            tapDetection.classList.add('hidden');
+            document.getElementById('info-fruit-name').textContent = currentFruit.name;
+            tapInfoInput.classList.remove('hidden');
+        });
+        
+        // 质量滑块
+        const weightSlider = document.getElementById('weight-slider');
+        const weightValue = document.getElementById('weight-value');
+        
+        weightSlider.addEventListener('input', () => {
+            weightValue.textContent = `${weightSlider.value}kg`;
+        });
+        
+        // 分析拍打检测结果
+        document.getElementById('analyze-tap').addEventListener('click', () => {
+            tapInfoInput.classList.add('hidden');
+            // 模拟生成随机评分（6-10分）
+            const score = Math.floor(Math.random() * 5) + 6;
+            updateResultScreen(score);
+            resultScreen.classList.remove('hidden');
+        });
+        
+        // 拍照功能模拟
+        const takePhotoBtn = document.getElementById('take-photo');
+        const photoActions = document.getElementById('photo-actions');
+        const previewImage = document.getElementById('preview-image');
+        const cameraPlaceholder = document.getElementById('camera-placeholder');
+        const takenCount = document.getElementById('taken-count');
+        const retakePhotoBtn = document.getElementById('retake-photo');
+        const confirmPhotoBtn = document.getElementById('confirm-photo');
+        
+        takePhotoBtn.addEventListener('click', () => {
+            // 模拟拍照
+            previewImage.src = `https://picsum.photos/seed/${currentFruit.name}${photoCount}/400/400`;
+            previewImage.classList.remove('hidden');
+            cameraPlaceholder.classList.add('hidden');
+            takePhotoBtn.classList.add('hidden');
+            photoActions.classList.remove('hidden');
+            
+            // 增加照片计数
+            photoCount++;
+            takenCount.textContent = photoCount;
+        });
+        
+        retakePhotoBtn.addEventListener('click', () => {
+            previewImage.classList.add('hidden');
+            cameraPlaceholder.classList.remove('hidden');
+            photoActions.classList.add('hidden');
+            takePhotoBtn.classList.remove('hidden');
+            
+            // 减少照片计数
+            photoCount--;
+            takenCount.textContent = photoCount;
+        });
+        
+        confirmPhotoBtn.addEventListener('click', () => {
+            if (photoCount >= requiredPhotos) {
+                // 照片数量足够，进入信息补充界面
+                visualDetection.classList.add('hidden');
+                document.getElementById('visual-info-fruit-name').textContent = currentFruit.name;
+                visualInfoInput.classList.remove('hidden');
+            } else {
+                // 继续拍照
+                previewImage.classList.add('hidden');
+                cameraPlaceholder.classList.remove('hidden');
+                photoActions.classList.add('hidden');
+                takePhotoBtn.classList.remove('hidden');
+            }
+        });
+        
+        // 分析外观检测结果
+        document.getElementById('analyze-visual').addEventListener('click', () => {
+            visualInfoInput.classList.add('hidden');
+            // 模拟生成随机评分（5-9分）
+            const score = Math.floor(Math.random() * 5) + 5;
+            updateResultScreen(score);
+            resultScreen.classList.remove('hidden');
+        });
+        
+        // 触觉选项点击事件
+        document.querySelectorAll('.touch-option').forEach(option => {
+            option.addEventListener('click', () => {
+                // 移除同组其他选项的选中状态
+                document.querySelectorAll('.touch-option').forEach(opt => {
+                    opt.classList.remove('option-selected');
+                });
+                
+                // 设置当前选项为选中状态
+                option.classList.add('option-selected');
+                
+                // 保存选择结果
+                userSelections.touch = option.dataset.option;
+            });
+        });
+        
+        // 嗅觉选项点击事件
+        document.querySelectorAll('.smell-option').forEach(option => {
+            option.addEventListener('click', () => {
+                // 移除同组其他选项的选中状态
+                document.querySelectorAll('.smell-option').forEach(opt => {
+                    opt.classList.remove('option-selected');
+                });
+                
+                // 设置当前选项为选中状态
+                option.classList.add('option-selected');
+                
+                // 保存选择结果
+                userSelections.smell = option.dataset.option;
+            });
+        });
+        
+        // 获取嗅触检测建议
+        document.getElementById('get-smell-touch-advice').addEventListener('click', () => {
+            // 验证用户是否完成了所有必要的选择
+            if (!userSelections.touch || !userSelections.smell) {
+                alert('请完成触觉和嗅觉的选择后再获取建议');
+                return;
+            }
+            
+            smellTouchDetection.classList.add('hidden');
+            
+            // 根据用户选择生成评分
+            let score = 0;
+            
+            // 触觉评分（4-6分）
+            if (userSelections.touch === 'unripe') {
+                score += 4;
+            } else if (userSelections.touch === 'ripe') {
+                score += 6;
+            } else {
+                score += 5;
+            }
+            
+            // 嗅觉评分（0-4分）
+            if (userSelections.smell === 'unripe') {
+                score += 2;
+            } else if (userSelections.smell === 'ripe') {
+                score += 4;
+            } else {
+                score += 3;
+            }
+            
+            updateResultScreen(score);
+            resultScreen.classList.remove('hidden');
+        });
+        
+        // 更新结果界面
+        function updateResultScreen(score) {
+            document.getElementById('result-fruit-name').textContent = currentFruit.name;
+            document.getElementById('result-fruit-img').src = currentFruit.image;
+            document.getElementById('ripeness-score').textContent = score;
+            document.getElementById('ripeness-bar').style.width = `${score * 10}%`;
+            
+            // 设置成熟度级别和建议
+            let level = '';
+            let advice = '';
+            
+            if (score < 4) {
+                level = '未成熟';
+                advice = `${score}分（未成熟）：还需要一段时间才能成熟，建议存放几天后再食用。`;
+            } else if (score < 7) {
+                level = '接近成熟';
+                advice = `${score}分（接近成熟）：还未完全成熟，可以存放1-2天，风味更佳。`;
+            } else if (score < 9) {
+                level = '成熟';
+                advice = `${score}分（成熟）：已完全成熟，口感和风味最佳，适合立即食用。`;
+            } else {
+                level = '过熟';
+                advice = `${score}分（过熟）：已过最佳食用期，建议尽快食用，可能已有轻微发酵。`;
+            }
+            
+            // 根据水果类型调整建议
+            if (currentFruit.name === '西瓜') {
+                advice += ' 冷藏后口感更佳。';
+            } else if (currentFruit.name === '芒果') {
+                advice += ' 可直接食用或制作甜品。';
+            } else if (currentFruit.name === '奇异果') {
+                advice += ' 可直接食用或加入酸奶中。';
+            } else if (currentFruit.name === '椰子') {
+                advice += ' 可直接饮用椰汁或制作椰子料理。';
+            } else if (currentFruit.name === '牛油果') {
+                advice += ' 适合制作沙拉或涂抹面包食用。';
+            } else if (currentFruit.name === '榴莲') {
+                advice += ' 气味浓郁，建议在通风处食用。';
+            }
+            
+            document.getElementById('ripeness-level').textContent = level;
+            document.getElementById('ripeness-advice').textContent = advice;
+        }
+        
+        // 反馈按钮
+        document.querySelectorAll('.feedback-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('feedback-input').classList.remove('hidden');
+            });
+        });
+        
+        // 提交反馈
+        document.getElementById('submit-feedback').addEventListener('click', () => {
+            document.getElementById('feedback-input').classList.add('hidden');
+            // 显示提交成功提示（实际应用中可添加提示）
+        });
+        
+        // 新检测按钮
+        document.getElementById('new-detection').addEventListener('click', () => {
+            resultScreen.classList.add('hidden');
+            fruitSelection.classList.remove('hidden');
+        });
+        
+        // 继续检测按钮（批量检测）
+        document.getElementById('batch-detection').addEventListener('click', () => {
+            resultScreen.classList.add('hidden');
+            // 根据当前水果类型返回相应的检测界面
+            if (currentFruit.type === 1) {
+                // 重置录音界面
+                afterRecording.classList.add('hidden');
+                recordStatus.textContent = '点击开始录音';
+                tapDetection.classList.remove('hidden');
+            } else if (currentFruit.type === 2) {
+                // 重置拍照界面
+                photoCount = 0;
+                document.getElementById('taken-count').textContent = '0';
+                previewImage.classList.add('hidden');
+                cameraPlaceholder.classList.remove('hidden');
+                photoActions.classList.add('hidden');
+                takePhotoBtn.classList.remove('hidden');
+                visualDetection.classList.remove('hidden');
+            } else {
+                // 重置嗅触检测界面
+                userSelections = {
+                    touch: '',
+                    smell: ''
+                };
+                document.querySelectorAll('.touch-option, .smell-option').forEach(option => {
+                    option.classList.remove('option-selected');
+                });
+                smellTouchDetection.classList.remove('hidden');
+            }
+        });
+        
+        // 模式切换
+        let isMerchantMode = false;
+        const modeToggleBtn = document.getElementById('mode-toggle');
+        const merchantModeToast = document.getElementById('merchant-mode-toast');
+        
+        modeToggleBtn.addEventListener('click', () => {
+            isMerchantMode = !isMerchantMode;
+            
+            if (isMerchantMode) {
+                modeToggleBtn.innerHTML = '<i class="fa fa-user mr-2"></i><span>切换到日常模式</span>';
+                merchantModeToast.textContent = '已切换到商户模式';
+            } else {
+                modeToggleBtn.innerHTML = '<i class="fa fa-shopping-bag mr-2"></i><span>切换到商户模式</span>';
+                merchantModeToast.textContent = '已切换到日常模式';
+            }
+            
+            // 显示提示
+            merchantModeToast.classList.remove('hidden');
+            setTimeout(() => {
+                merchantModeToast.classList.add('hidden');
+            }, 2000);
+        });
+        
+        // 搜索功能优化
+        const fruitSearch = document.getElementById('fruit-search');
+        const searchResults = document.getElementById('search-results');
+        const matchCount = document.getElementById('match-count');
+        const noResults = document.getElementById('no-results');
+        const sections = document.querySelectorAll('main section');
+        const searchSuggestions = document.getElementById('search-suggestions');
+        
+        // 点击页面其他地方关闭搜索建议
+        document.addEventListener('click', (e) => {
+            if (!fruitSearch.contains(e.target) && !searchSuggestions.contains(e.target)) {
+                searchSuggestions.classList.add('hidden');
+            }
+        });
+        
+        fruitSearch.addEventListener('input', () => {
+            const searchTerm = fruitSearch.value.toLowerCase().trim();
+            const fruitCards = document.querySelectorAll('.fruit-card');
+            let matches = 0;
+            
+            // 显示搜索结果计数
+            searchResults.classList.remove('hidden');
+            
+            // 清空之前的搜索建议
+            searchSuggestions.innerHTML = '';
+            
+            if (searchTerm === '') {
+                // 搜索为空时显示所有内容
+                fruitCards.forEach(card => {
+                    card.style.display = 'block';
+                });
+                sections.forEach(section => {
+                    section.style.display = 'block';
+                });
+                searchResults.classList.add('hidden');
+                noResults.classList.add('hidden');
+                searchSuggestions.classList.add('hidden');
+                return;
+            }
+            
+            // 生成搜索建议
+            const suggestions = allFruits
+                .filter(fruit => fruit.name.toLowerCase().includes(searchTerm))
+                .slice(0, 5); // 最多显示5个建议
+                
+            if (suggestions.length > 0) {
+                suggestions.forEach(fruit => {
+                    const suggestionItem = document.createElement('div');
+                    suggestionItem.className = 'px-4 py-2 hover:bg-gray-100 cursor-pointer flex justify-between';
+                    suggestionItem.innerHTML = `
+                        <span>${fruit.name}</span>
+                        <span class="text-xs text-gray-500">${fruit.region}</span>
+                    `;
+                    suggestionItem.addEventListener('click', () => {
+                        fruitSearch.value = fruit.name;
+                        // 触发搜索
+                        const event = new Event('input', { bubbles: true });
+                        fruitSearch.dispatchEvent(event);
+                        searchSuggestions.classList.add('hidden');
+                    });
+                    searchSuggestions.appendChild(suggestionItem);
+                });
+                searchSuggestions.classList.remove('hidden');
+            } else {
+                searchSuggestions.classList.add('hidden');
+            }
+            
+            // 搜索逻辑
+            fruitCards.forEach(card => {
+                const fruitName = card.dataset.name.toLowerCase();
+                // 检查是否匹配水果名称
+                const isMatch = fruitName.includes(searchTerm);
+                
+                if (isMatch) {
+                    card.style.display = 'block';
+                    matches++;
+                    // 确保包含匹配项的分类可见
+                    card.closest('section').style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+            
+            // 更新匹配计数
+            matchCount.textContent = matches;
+            
+            // 检查每个分类是否还有可见卡片
+            sections.forEach(section => {
+                const visibleCards = section.querySelectorAll('.fruit-card:not([style*="display: none"])');
+                if (visibleCards.length === 0) {
+                    section.style.display = 'none';
+                }
+            });
+            
+            // 显示无结果提示
+            if (matches === 0) {
+                noResults.classList.remove('hidden');
+            } else {
+                noResults.classList.add('hidden');
+            }
+        });
+        
+        // 地区筛选功能
+        document.querySelectorAll('.region-filter').forEach(btn => {
+            btn.addEventListener('click', () => {
+                // 移除所有按钮的active状态
+                document.querySelectorAll('.region-filter').forEach(b => {
+                    b.classList.remove('active', 'bg-primary', 'text-white');
+                    b.classList.add('bg-gray-100', 'text-gray-700');
+                });
+                
+                // 设置当前按钮为active状态
+                btn.classList.add('active', 'bg-primary', 'text-white');
+                btn.classList.remove('bg-gray-100', 'text-gray-700');
+                
+                const region = btn.textContent.trim().replace('全部地区', '');
+                const fruitCards = document.querySelectorAll('.fruit-card');
+                let matches = 0;
+                
+                // 筛选逻辑
+                fruitCards.forEach(card => {
+                    const fruitRegion = card.dataset.region;
+                    // 检查是否匹配地区
+                    const isMatch = region === '' || fruitRegion.includes(region);
+                    
+                    if (isMatch) {
+                        card.style.display = 'block';
+                        matches++;
+                        // 确保包含匹配项的分类可见
+                        card.closest('section').style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+                
+                // 检查每个分类是否还有可见卡片
+                sections.forEach(section => {
+                    const visibleCards = section.querySelectorAll('.fruit-card:not([style*="display: none"])');
+                    if (visibleCards.length === 0) {
+                        section.style.display = 'none';
+                    }
+                });
+                
+                // 显示无结果提示
+                if (matches === 0) {
+                    noResults.classList.remove('hidden');
+                } else {
+                    noResults.classList.add('hidden');
+                }
+            });
+        });
+        
+        // 显示所有水果按钮
+        document.getElementById('show-all-fruits').addEventListener('click', () => {
+            // 清空搜索框
+            fruitSearch.value = '';
+            // 触发搜索事件
+            const event = new Event('input', { bubbles: true });
+            fruitSearch.dispatchEvent(event);
+            // 重置地区筛选为全部
+            document.querySelector('.region-filter.active').click();
+        });
+    </script>
+
+
+</body></html>
+    
